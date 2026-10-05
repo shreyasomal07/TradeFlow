@@ -10,30 +10,23 @@ import {
   Database,
   Search,
   CheckCircle2,
-  HelpCircle,
   Code2,
   Zap,
   Play,
   Check,
   Cpu,
-  BookOpen,
   ArrowDownRight,
   TrendingUp,
   RefreshCw,
   Clock,
-  ShieldCheck,
-  ChevronDown,
-  ChevronRight,
-  Server,
   Activity,
   Globe,
-  Sliders,
   DollarSign
 } from 'lucide-react';
 import { formatCurrency, formatNumber } from '../utils/formatters';
 
 export const DataStructuresPage = () => {
-  const [activeTab, setActiveTab] = useState('how-it-works'); // 'how-it-works' | 'data-structures' | 'matching-algorithm' | 'viva-guide'
+  const [activeTab, setActiveTab] = useState('how-it-works'); // 'how-it-works' | 'data-structures' | 'matching-algorithm'
   
   // Interactive Matching Simulator State
   const [simStep, setSimStep] = useState(0);
@@ -41,9 +34,6 @@ export const DataStructuresPage = () => {
   const [simBuyQty, setSimBuyQty] = useState(100);
   const [simSellPrice, setSimSellPrice] = useState(1245);
   const [simSellQty, setSimSellQty] = useState(40);
-
-  // Active accordion question in Viva tab
-  const [openFaq, setOpenFaq] = useState(0);
 
   const simStepsList = [
     {
@@ -58,14 +48,14 @@ export const DataStructuresPage = () => {
       title: 'Step 1: Incoming BUY Order Arrives',
       action: `matchingEngine.processOrder({ orderId: "ORD_BUY_1", type: 'BUY', price: ₹${simBuyPrice}, qty: ${simBuyQty}, timestamp: T1 })`,
       explanation: `A buyer submits a limit order to buy ${simBuyQty} shares at up to ₹${simBuyPrice}. The engine performs an O(1) peek() on the MinHeap root to inspect the lowest seller price (₹${simSellPrice}).`,
-      dsEffect: `Condition Check: Buy Price (₹${simBuyPrice}) >= Best Ask (₹${simSellPrice}) -> VALID MATCH!`
+      dsEffect: `Condition Check: Buy Price (₹${simBuyPrice}) >= Best Ask (₹${simSellPrice}) → VALID MATCH!`
     },
     {
       step: 2,
       title: 'Step 2: Execution via Maker Price-Time Priority',
       action: `tradeQty = min(${simBuyQty}, ${simSellQty}) = ${Math.min(simBuyQty, simSellQty)} shares\nexecutionPrice = ₹${simSellPrice} (Maker Price Priority)`,
       explanation: `The trade executes at the resting maker order price (₹${simSellPrice}). ${Math.min(simBuyQty, simSellQty)} shares are traded. A new Trade object is created and appended to the Dynamic Trade Ledger.`,
-      dsEffect: `Trade Record Generated -> ${Math.min(simBuyQty, simSellQty)} shares @ ₹${simSellPrice} | Total Turnover: ₹${(Math.min(simBuyQty, simSellQty) * simSellPrice).toLocaleString('en-IN')}`
+      dsEffect: `Trade Record Generated → ${Math.min(simBuyQty, simSellQty)} shares @ ₹${simSellPrice} | Total Turnover: ₹${(Math.min(simBuyQty, simSellQty) * simSellPrice).toLocaleString('en-IN')}`
     },
     {
       step: 3,
@@ -73,33 +63,6 @@ export const DataStructuresPage = () => {
       action: `sellOrders.extractMin() // Sell order completely FILLED\nremainingBuyQty = ${simBuyQty} - ${Math.min(simBuyQty, simSellQty)} = ${simBuyQty - Math.min(simBuyQty, simSellQty)} shares\nbuyOrders.insert({ price: ₹${simBuyPrice}, qty: ${simBuyQty - Math.min(simBuyQty, simSellQty)} })`,
       explanation: `The resting sell order is completely filled and removed from the MinHeap via extractMin() in O(log n). The buyer still has ${simBuyQty - Math.min(simBuyQty, simSellQty)} remaining shares, which bubble up into the MaxHeap as a resting bid.`,
       dsEffect: `MaxHeap Root: ${simBuyQty - Math.min(simBuyQty, simSellQty)} shares @ ₹${simBuyPrice} | MinHeap: Next lowest ask becomes root`
-    }
-  ];
-
-  const vivaQuestions = [
-    {
-      q: 'Why did you use Max-Heap and Min-Heap instead of a single sorted array or list?',
-      a: 'In a real-time stock exchange, finding the best buyer and seller must happen in O(1) constant time. With an unsorted array, finding the top price is O(n). With a sorted array, insertion requires shifting elements in O(n) time. Binary Heaps give the best of both worlds: O(1) instant lookup of the best bid/ask and O(log n) worst-case insertion and extraction. Using MaxHeap for Bids and MinHeap for Asks ensures optimal throughput.'
-    },
-    {
-      q: 'What is Price-Time Priority and how is it implemented in your heaps?',
-      a: 'Price-Time Priority (FIFO at same price level) is the international financial exchange standard. 1) Price Priority: Buyers offering higher prices and sellers offering lower prices are matched first. 2) Time Priority (Tie-Breaker): If two orders have the exact same price, the order submitted earlier (lower timestamp) is executed first. In our code, the heap comparator evaluates: if (child.price === parent.price) return child.timestamp < parent.timestamp.'
-    },
-    {
-      q: 'Why is a Hash Map used alongside the Heaps in the Order Book?',
-      a: 'While heaps allow O(1) access to the root element, searching for an arbitrary order in the middle of a binary heap takes O(n) linear time. By maintaining an in-memory Hash Map (orderMap) that maps orderId -> Order Object, we achieve instant O(1) order lookups, real-time status checks, and instant cancellation verification without scanning the entire heap.'
-    },
-    {
-      q: 'How does your engine handle Partial Fills and Multi-Level Fills?',
-      a: 'When an incoming order quantity exceeds the resting order quantity, the engine calculates tradeQuantity = min(remainingBuyer, remainingSeller). The resting order is marked FILLED and removed via extractMin()/extractMax() in O(log n), while the remaining incoming quantity continues matching against the next price level in a while-loop until filled or no longer matching, at which point the residue rests in its respective heap.'
-    },
-    {
-      q: 'What is the Maker vs Taker pricing rule in continuous double auctions?',
-      a: 'The maker is the passive trader whose limit order was already resting in the order book, providing liquidity. The taker is the active incoming order that matches it. The continuous double auction executes the trade at the maker (resting) price. This incentivizes market liquidity and prevents price manipulation.'
-    },
-    {
-      q: 'What are the Space and Time Complexities of your matching system?',
-      a: 'Space Complexity: O(N) where N is the number of active open orders stored across the binary heap arrays and Hash Map. Time Complexities: Best Price Peek is O(1); Order Insertion is O(log n); Order Fill & Heap Rebalance is O(log n); Direct Order Lookup by ID is O(1); Trade Ledger Append is O(1) amortized.'
     }
   ];
 
@@ -164,18 +127,6 @@ export const DataStructuresPage = () => {
             >
               <Zap className="w-3.5 h-3.5" />
               <span>Matching Simulator</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('viva-guide')}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-bold transition-all ${
-                activeTab === 'viva-guide'
-                  ? 'bg-emerald-500 text-black shadow-md shadow-emerald-500/20'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <BookOpen className="w-3.5 h-3.5" />
-              <span>Viva Q&A Guide</span>
             </button>
           </div>
         </div>
@@ -754,92 +705,6 @@ export const DataStructuresPage = () => {
                 </div>
               </div>
 
-            </div>
-          </div>
-
-        </div>
-      )}
-
-      {/* ======================================================= */}
-      {/* TAB 4: VIVA Q&A GUIDE & PROFESSOR CHEAT SHEET */}
-      {/* ======================================================= */}
-      {activeTab === 'viva-guide' && (
-        <div className="space-y-6 animate-in fade-in duration-200">
-          
-          <div className="glass-panel rounded-2xl p-6 space-y-4">
-            <div className="flex items-center gap-2 pb-3 border-b border-white/5">
-              <HelpCircle className="w-5 h-5 text-emerald-400" />
-              <div>
-                <h2 className="text-sm font-extrabold text-white uppercase tracking-wider">
-                  Professor Viva Examination Cheat Sheet
-                </h2>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Model technical answers to likely questions asked by academic examiners and professors during project viva.
-                </p>
-              </div>
-            </div>
-
-            {/* Accordion Questions */}
-            <div className="space-y-3 pt-2">
-              {vivaQuestions.map((item, idx) => {
-                const isOpen = openFaq === idx;
-                return (
-                  <div
-                    key={idx}
-                    className={`rounded-2xl border transition-all overflow-hidden ${
-                      isOpen
-                        ? 'bg-[#101623] border-emerald-500/30 shadow-lg shadow-emerald-500/5'
-                        : 'bg-[#0B0F19] border-white/5 hover:border-white/10'
-                    }`}
-                  >
-                    <button
-                      onClick={() => setOpenFaq(isOpen ? null : idx)}
-                      className="w-full flex items-center justify-between p-4 text-left transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className={`w-6 h-6 rounded-lg text-xs font-mono font-bold flex items-center justify-center ${
-                          isOpen ? 'bg-emerald-500 text-black' : 'bg-white/5 text-slate-400'
-                        }`}>
-                          Q{idx + 1}
-                        </span>
-                        <span className="text-xs font-bold text-white pr-4">
-                          {item.q}
-                        </span>
-                      </div>
-                      {isOpen ? (
-                        <ChevronDown className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                      ) : (
-                        <ChevronRight className="w-4 h-4 text-slate-500 flex-shrink-0" />
-                      )}
-                    </button>
-
-                    {isOpen && (
-                      <div className="px-4 pb-4 pt-1 border-t border-white/5 text-xs text-slate-300 leading-relaxed bg-[#0B0F19]/50">
-                        <div className="p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/10 text-emerald-200">
-                          <strong className="text-emerald-400 font-bold block mb-1">Answer to Professor:</strong>
-                          {item.a}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Quick Summary Reference Box */}
-          <div className="p-5 rounded-2xl bg-gradient-to-r from-cyan-500/10 via-purple-500/10 to-emerald-500/10 border border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="space-y-1">
-              <div className="text-xs font-extrabold text-white flex items-center gap-1.5">
-                <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                <span>Unit Test Verification (Automated Proof)</span>
-              </div>
-              <p className="text-xs text-slate-400">
-                All 41/41 unit test scenarios covering Heaps, Priority Tie-Breakers, Partial Fills, and Cancellations are verified in `tests/dataStructures.test.js`.
-              </p>
-            </div>
-            <div className="px-3.5 py-1.5 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-mono font-bold whitespace-nowrap">
-              41 / 41 Tests Passing (100%)
             </div>
           </div>
 
