@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingCart, ArrowDownCircle, ArrowUpCircle, Check, AlertCircle, Sparkles } from 'lucide-react';
+import { ShoppingCart, ArrowDownCircle, ArrowUpCircle, Check, AlertCircle, Sparkles, LogIn } from 'lucide-react';
 import { useMarket } from '../context/MarketContext';
 import { useAuth } from '../context/AuthContext';
 import { formatCurrency, formatNumber } from '../utils/formatters';
@@ -14,7 +14,7 @@ export const OrderForm = ({ initialPrice = null, initialSide = 'BUY' }) => {
     placeOrder
   } = useMarket();
 
-  const { user } = useAuth();
+  const { user, isAuthenticated, openAuthModal } = useAuth();
 
   const [orderType, setOrderType] = useState('BUY'); // 'BUY' or 'SELL'
   const [price, setPrice] = useState('');
@@ -56,6 +56,11 @@ export const OrderForm = ({ initialPrice = null, initialSide = 'BUY' }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setValidationError('');
+
+    if (!isAuthenticated || !user) {
+      openAuthModal('signin');
+      return;
+    }
 
     if (!selectedSymbol) {
       setValidationError('Please select a stock.');
@@ -260,13 +265,20 @@ export const OrderForm = ({ initialPrice = null, initialSide = 'BUY' }) => {
           type="submit"
           disabled={isSubmitting}
           className={`w-full py-3 px-4 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all shadow-lg flex items-center justify-center gap-2 ${
-            isBuy
+            !isAuthenticated
+              ? 'bg-cyan-500 hover:bg-cyan-400 text-black shadow-cyan-500/25 hover:shadow-cyan-500/40'
+              : isBuy
               ? 'bg-emerald-500 hover:bg-emerald-400 text-black shadow-emerald-500/25 hover:shadow-emerald-500/40'
               : 'bg-rose-500 hover:bg-rose-400 text-white shadow-rose-500/25 hover:shadow-rose-500/40'
           } ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
           {isSubmitting ? (
             <span>Processing via Engine...</span>
+          ) : !isAuthenticated ? (
+            <>
+              <LogIn className="w-4 h-4" />
+              <span>Sign In to Place Order</span>
+            </>
           ) : (
             <>
               <span>Place {orderType} Order</span>

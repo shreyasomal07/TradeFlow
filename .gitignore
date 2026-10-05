@@ -32,3 +32,8 @@ yarn-error.log*
 *.njsproj
 *.sln
 *.sw?
+
+# Persistent DB data
+backend/data/
+data/
+

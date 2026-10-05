@@ -22,22 +22,23 @@ export const TradesPage = () => {
   const { trades, stocks, clearTrades } = useMarket();
   const { user, isAuthenticated } = useAuth();
 
-  const [tradeViewMode, setTradeViewMode] = useState('ALL'); // 'ALL' or 'PERSONAL'
+  const [tradeViewMode, setTradeViewMode] = useState(() => (isAuthenticated ? 'PERSONAL' : 'ALL')); // 'ALL' or 'PERSONAL'
   const [selectedStockFilter, setSelectedStockFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
-  const currentUsername = user?.username?.toLowerCase() || 'trader_user';
-  const currentUserId = user?.userId || 'USR_DEMO_DEFAULT';
+  const currentUsername = user?.username?.toLowerCase() || '';
+  const currentUserId = user?.userId?.toLowerCase() || '';
 
   const isUserTrade = (tr) => {
+    if (!currentUsername && !currentUserId) return false;
     const buyer = tr.buyer?.toLowerCase();
     const seller = tr.seller?.toLowerCase();
     return (
       buyer === currentUsername ||
-      buyer === currentUserId.toLowerCase() ||
+      buyer === currentUserId ||
       seller === currentUsername ||
-      seller === currentUserId.toLowerCase()
+      seller === currentUserId
     );
   };
 
@@ -302,12 +303,16 @@ export const TradesPage = () => {
               </button>
               <button
                 onClick={async () => {
-                  await clearTrades(selectedStockFilter !== 'ALL' ? selectedStockFilter : null);
+                  const isAll = tradeViewMode === 'ALL';
+                  await clearTrades(
+                    selectedStockFilter !== 'ALL' ? selectedStockFilter : null,
+                    isAll
+                  );
                   setShowClearConfirm(false);
                 }}
                 className="flex-1 py-2 px-4 rounded-xl text-xs font-bold text-white bg-rose-500 hover:bg-rose-600 transition-colors shadow-lg shadow-rose-500/20"
               >
-                Clear All
+                {tradeViewMode === 'PERSONAL' ? 'Clear My Trades' : 'Clear All Trades'}
               </button>
             </div>
           </div>

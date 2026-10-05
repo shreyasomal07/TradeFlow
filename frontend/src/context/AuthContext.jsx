@@ -14,14 +14,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
     try {
       const stored = localStorage.getItem('tradeflow_user');
-      return stored ? JSON.parse(stored) : {
-        userId: 'USR_DEMO_DEFAULT',
-        name: 'Rahul Sharma',
-        username: 'trader_user',
-        email: 'trader@tradeflow.com',
-        virtualBalance: 1000000,
-        role: 'TRADER'
-      };
+      return stored ? JSON.parse(stored) : null;
     } catch {
       return null;
     }

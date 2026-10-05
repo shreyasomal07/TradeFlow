@@ -12,7 +12,12 @@ export async function getOrders(req, res) {
 
     if (symbol) filter.stockSymbol = symbol.toUpperCase();
     if (status) filter.status = status.toUpperCase();
-    if (userId) filter.userId = userId;
+    if (userId) {
+      filter.$or = [
+        { userId: userId },
+        { userId: userId.toLowerCase() }
+      ];
+    }
 
     const orders = await Order.find(filter)
       .sort({ timestamp: -1 })
@@ -102,8 +107,18 @@ export async function getDataStructuresDebug(req, res) {
 
 export async function clearOrders(req, res) {
   try {
-    const { userId = 'trader_user', all = 'false' } = req.query;
-    const filter = all === 'true' ? {} : { userId };
+    const { userId, all = 'false' } = req.query;
+    let filter = {};
+    if (all !== 'true' && userId) {
+      filter = {
+        $or: [
+          { userId: userId },
+          { userId: userId.toLowerCase() }
+        ]
+      };
+    } else if (all !== 'true') {
+      filter = { userId: 'trader_user' };
+    }
 
     const ordersToClear = await Order.find(filter);
     for (const ord of ordersToClear) {

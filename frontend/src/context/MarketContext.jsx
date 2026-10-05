@@ -1,16 +1,15 @@
-/**
- * MarketContext.jsx — Central State Management & Real-Time Orchestration
- */
-
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import confetti from 'canvas-confetti';
 import { stockAPI, orderAPI, tradeAPI, simulationAPI } from '../services/api';
 import socket, { subscribeToStock, unsubscribeFromStock } from '../services/socket';
+import { useAuth } from './AuthContext';
 
 const MarketContext = createContext(null);
 
 export const MarketProvider = ({ children }) => {
+  const { user } = useAuth();
+
   const [stocks, setStocks] = useState([]);
   const [selectedSymbol, setSelectedSymbol] = useState('ABC');
   const [selectedStock, setSelectedStock] = useState(null);
@@ -55,9 +54,14 @@ export const MarketProvider = ({ children }) => {
   const fetchData = useCallback(async () => {
     try {
       setIsLoading(true);
+      const userKey = user?.username || user?.userId;
+      const ordersPromise = userKey
+        ? orderAPI.getAll({ userId: userKey, limit: 100 })
+        : Promise.resolve({ success: true, data: [] });
+
       const [stocksRes, ordersRes, tradesRes, simRes] = await Promise.all([
         stockAPI.getAll(),
-        orderAPI.getAll({ limit: 100 }),
+        ordersPromise,
         tradeAPI.getAll({ limit: 50 }),
         simulationAPI.getStatus()
       ]);
@@ -71,8 +75,8 @@ export const MarketProvider = ({ children }) => {
         }
       }
 
-      if (ordersRes.success) setOrders(ordersRes.data);
-      if (tradesRes.success) setTrades(tradesRes.data);
+      if (ordersRes.success) setOrders(ordersRes.data || []);
+      if (tradesRes.success) setTrades(tradesRes.data || []);
       if (simRes.success) setSimulation(simRes.data);
 
       // Fetch order book for selected symbol
@@ -86,9 +90,9 @@ export const MarketProvider = ({ children }) => {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedSymbol]);
+  }, [selectedSymbol, user]);
 
-  // Load on mount
+  // Load on mount or when user changes
   useEffect(() => {
     fetchData();
   }, [fetchData]);
@@ -162,7 +166,11 @@ export const MarketProvider = ({ children }) => {
   // Clear Order History
   const handleClearOrders = async (all = false) => {
     try {
-      const res = await orderAPI.clearOrders({ all: all ? 'true' : 'false' });
+      const userKey = user?.username || user?.userId;
+      const res = await orderAPI.clearOrders({
+        userId: all ? undefined : userKey,
+        all: all ? 'true' : 'false'
+      });
       if (res.success) {
         toast.success(res.message || 'Order history cleared.');
         setOrders([]);
@@ -181,12 +189,34 @@ export const MarketProvider = ({ children }) => {
   };
 
   // Clear Trade History
-  const handleClearTrades = async (symbol = null) => {
+  const handleClearTrades = async (symbol = null, all = false) => {
     try {
-      const res = await tradeAPI.clearTrades(symbol ? { symbol } : {});
+      const userKey = user?.username || user?.userId;
+      const params = {};
+      if (symbol) params.symbol = symbol;
+      if (all || !userKey) {
+        params.all = 'true';
+      } else {
+        params.userId = userKey;
+      }
+
+      const res = await tradeAPI.clearTrades(params);
       if (res.success) {
         toast.success(res.message || 'Trade history cleared.');
-        setTrades((prev) => (symbol ? prev.filter((t) => t.stockSymbol !== symbol) : []));
+        if (all) {
+          setTrades([]);
+        } else if (userKey) {
+          const u = userKey.toLowerCase();
+          setTrades((prev) =>
+            prev.filter(
+              (t) =>
+                t.buyer?.toLowerCase() !== u &&
+                t.seller?.toLowerCase() !== u &&
+                t.buyer !== userKey &&
+                t.seller !== userKey
+            )
+          );
+        }
         return res.data;
       }
     } catch (err) {
@@ -232,13 +262,21 @@ export const MarketProvider = ({ children }) => {
 
     // 1. Order Created
     const onOrderCreated = (newOrder) => {
-      setOrders((prev) => {
-        const exists = prev.some((o) => o.orderId === newOrder.orderId);
-        if (exists) {
-          return prev.map((o) => (o.orderId === newOrder.orderId ? newOrder : o));
-        }
-        return [newOrder, ...prev];
-      });
+      const currentKey = user?.username || user?.userId;
+      const isMyOrder =
+        currentKey &&
+        (newOrder.userId?.toLowerCase() === currentKey.toLowerCase() ||
+          newOrder.userId === currentKey);
+
+      if (isMyOrder) {
+        setOrders((prev) => {
+          const exists = prev.some((o) => o.orderId === newOrder.orderId);
+          if (exists) {
+            return prev.map((o) => (o.orderId === newOrder.orderId ? newOrder : o));
+          }
+          return [newOrder, ...prev];
+        });
+      }
 
       addActivity(
         'ORDER_CREATED',
@@ -249,9 +287,17 @@ export const MarketProvider = ({ children }) => {
 
     // 2. Order Updated
     const onOrderUpdated = (updatedOrder) => {
-      setOrders((prev) =>
-        prev.map((o) => (o.orderId === updatedOrder.orderId ? { ...o, ...updatedOrder } : o))
-      );
+      const currentKey = user?.username || user?.userId;
+      const isMyOrder =
+        currentKey &&
+        (updatedOrder.userId?.toLowerCase() === currentKey.toLowerCase() ||
+          updatedOrder.userId === currentKey);
+
+      if (isMyOrder) {
+        setOrders((prev) =>
+          prev.map((o) => (o.orderId === updatedOrder.orderId ? { ...o, ...updatedOrder } : o))
+        );
+      }
 
       if (updatedOrder.status === 'PARTIALLY_FILLED') {
         addActivity(
