@@ -256,6 +256,7 @@ export const OrdersPage = () => {
           )}
         </div>
       </div>
+      )}
 
       {/* Cancellation Confirmation Modal */}
       <CancelOrderModal
