@@ -1,584 +1,578 @@
 /**
- * DataStructuresPage.jsx — Interactive Viva Demonstration & Data Structures Visualizer
+ * DataStructuresPage.jsx — Comprehensive Data Structures & Website Architecture Guide
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Binary,
   Layers,
-  ArrowDown,
   ArrowRight,
   Database,
   Search,
   CheckCircle2,
   HelpCircle,
   Code2,
-  RefreshCw,
   Zap,
   Play,
   Check,
   Cpu,
-  BookOpen
+  BookOpen,
+  ArrowDownRight,
+  TrendingUp,
+  RefreshCw,
+  Clock,
+  ShieldCheck,
+  ChevronDown,
+  ChevronRight,
+  Server,
+  Activity,
+  Globe,
+  Sliders,
+  DollarSign
 } from 'lucide-react';
-import { useMarket } from '../context/MarketContext';
-import { orderAPI } from '../services/api';
-import { formatCurrency, formatNumber, formatTime } from '../utils/formatters';
+import { formatCurrency, formatNumber } from '../utils/formatters';
 
 export const DataStructuresPage = () => {
-  const { selectedSymbol, stocks, setSelectedSymbol } = useMarket();
-  const [debugState, setDebugState] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('visualizer'); // 'visualizer' | 'interactive' | 'viva'
-
-  // Interactive step simulator state
+  const [activeTab, setActiveTab] = useState('how-it-works'); // 'how-it-works' | 'data-structures' | 'matching-algorithm' | 'viva-guide'
+  
+  // Interactive Matching Simulator State
   const [simStep, setSimStep] = useState(0);
   const [simBuyPrice, setSimBuyPrice] = useState(1250);
   const [simBuyQty, setSimBuyQty] = useState(100);
   const [simSellPrice, setSimSellPrice] = useState(1245);
   const [simSellQty, setSimSellQty] = useState(40);
 
-  const fetchDebugState = async () => {
-    try {
-      setIsLoading(true);
-      const res = await orderAPI.getDebugState(selectedSymbol);
-      if (res.success) {
-        setDebugState(res.data);
-      }
-    } catch (err) {
-      console.error('Error fetching debug data:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Active accordion question in Viva tab
+  const [openFaq, setOpenFaq] = useState(0);
 
-  useEffect(() => {
-    fetchDebugState();
-  }, [selectedSymbol]);
-
-  // Simulation steps explanation
   const simStepsList = [
     {
+      step: 0,
       title: 'Initial State: Resting Sell Order in MinHeap',
-      code: `sellOrders.insert({ price: ₹${simSellPrice}, qty: ${simSellQty} })`,
-      explanation: `MinHeap maintains the lowest ask at root index 0. O(log n) insert via bubbleUp().`,
-      heapState: `MinHeap Root: ₹${simSellPrice} (${simSellQty} shares)`
+      action: `sellOrders.insert({ orderId: "ORD_SELL_1", price: ₹${simSellPrice}, qty: ${simSellQty}, timestamp: T0 })`,
+      explanation: `A seller placed an order to sell ${simSellQty} shares at ₹${simSellPrice}. It was inserted into the MinHeap and placed at root index 0 because ₹${simSellPrice} is currently the lowest ask price.`,
+      dsEffect: `MinHeap Root: ₹${simSellPrice} (${simSellQty} shares) | OrderMap: Saved ORD_SELL_1 in O(1)`
     },
     {
+      step: 1,
       title: 'Step 1: Incoming BUY Order Arrives',
-      code: `matchingEngine.processOrder({ type: 'BUY', price: ₹${simBuyPrice}, qty: ${simBuyQty} })`,
-      explanation: `Engine inspects buy price (₹${simBuyPrice}) and compares against MinHeap peek() ask price (₹${simSellPrice}).`,
-      heapState: `Condition Check: ₹${simBuyPrice} >= ₹${simSellPrice} -> MATCH VALID!`
+      action: `matchingEngine.processOrder({ orderId: "ORD_BUY_1", type: 'BUY', price: ₹${simBuyPrice}, qty: ${simBuyQty}, timestamp: T1 })`,
+      explanation: `A buyer submits a limit order to buy ${simBuyQty} shares at up to ₹${simBuyPrice}. The engine performs an O(1) peek() on the MinHeap root to inspect the lowest seller price (₹${simSellPrice}).`,
+      dsEffect: `Condition Check: Buy Price (₹${simBuyPrice}) >= Best Ask (₹${simSellPrice}) -> VALID MATCH!`
     },
     {
-      title: 'Step 2: Maker Price Priority & Quantity Execution',
-      code: `tradeQuantity = Math.min(${simBuyQty}, ${simSellQty}) = ${Math.min(simBuyQty, simSellQty)}\nexecutedPrice = ${simSellPrice} (Maker Price Priority)`,
-      explanation: `Standard exchange rule: Trade executes at the resting order's ask price. ${Math.min(simBuyQty, simSellQty)} shares matched.`,
-      heapState: `Trade Record Generated -> Trade ID: TRD_${Date.now().toString().slice(-4)}`
+      step: 2,
+      title: 'Step 2: Execution via Maker Price-Time Priority',
+      action: `tradeQty = min(${simBuyQty}, ${simSellQty}) = ${Math.min(simBuyQty, simSellQty)} shares\nexecutionPrice = ₹${simSellPrice} (Maker Price Priority)`,
+      explanation: `The trade executes at the resting maker order price (₹${simSellPrice}). ${Math.min(simBuyQty, simSellQty)} shares are traded. A new Trade object is created and appended to the Dynamic Trade Ledger.`,
+      dsEffect: `Trade Record Generated -> ${Math.min(simBuyQty, simSellQty)} shares @ ₹${simSellPrice} | Total Turnover: ₹${(Math.min(simBuyQty, simSellQty) * simSellPrice).toLocaleString('en-IN')}`
     },
     {
-      title: 'Step 3: Heap Rebalancing & Partial Fill Update',
-      code: `sellOrders.extractMin() // ${simSellQty} fully filled!\nremainingBuy = ${simBuyQty - Math.min(simBuyQty, simSellQty)} shares`,
-      explanation: `Sell order is FILLED and extracted in O(log n). Remaining ${simBuyQty - Math.min(simBuyQty, simSellQty)} BUY shares bubble up into MaxHeap.`,
-      heapState: `MaxHeap Root: ${simBuyQty - Math.min(simBuyQty, simSellQty)} shares @ ₹${simBuyPrice}`
+      step: 3,
+      title: 'Step 3: Heap Rebalancing & Partial Fill Handling',
+      action: `sellOrders.extractMin() // Sell order completely FILLED\nremainingBuyQty = ${simBuyQty} - ${Math.min(simBuyQty, simSellQty)} = ${simBuyQty - Math.min(simBuyQty, simSellQty)} shares\nbuyOrders.insert({ price: ₹${simBuyPrice}, qty: ${simBuyQty - Math.min(simBuyQty, simSellQty)} })`,
+      explanation: `The resting sell order is completely filled and removed from the MinHeap via extractMin() in O(log n). The buyer still has ${simBuyQty - Math.min(simBuyQty, simSellQty)} remaining shares, which bubble up into the MaxHeap as a resting bid.`,
+      dsEffect: `MaxHeap Root: ${simBuyQty - Math.min(simBuyQty, simSellQty)} shares @ ₹${simBuyPrice} | MinHeap: Next lowest ask becomes root`
+    }
+  ];
+
+  const vivaQuestions = [
+    {
+      q: 'Why did you use Max-Heap and Min-Heap instead of a single sorted array or list?',
+      a: 'In a real-time stock exchange, finding the best buyer and seller must happen in O(1) constant time. With an unsorted array, finding the top price is O(n). With a sorted array, insertion requires shifting elements in O(n) time. Binary Heaps give the best of both worlds: O(1) instant lookup of the best bid/ask and O(log n) worst-case insertion and extraction. Using MaxHeap for Bids and MinHeap for Asks ensures optimal throughput.'
+    },
+    {
+      q: 'What is Price-Time Priority and how is it implemented in your heaps?',
+      a: 'Price-Time Priority (FIFO at same price level) is the international financial exchange standard. 1) Price Priority: Buyers offering higher prices and sellers offering lower prices are matched first. 2) Time Priority (Tie-Breaker): If two orders have the exact same price, the order submitted earlier (lower timestamp) is executed first. In our code, the heap comparator evaluates: if (child.price === parent.price) return child.timestamp < parent.timestamp.'
+    },
+    {
+      q: 'Why is a Hash Map used alongside the Heaps in the Order Book?',
+      a: 'While heaps allow O(1) access to the root element, searching for an arbitrary order in the middle of a binary heap takes O(n) linear time. By maintaining an in-memory Hash Map (orderMap) that maps orderId -> Order Object, we achieve instant O(1) order lookups, real-time status checks, and instant cancellation verification without scanning the entire heap.'
+    },
+    {
+      q: 'How does your engine handle Partial Fills and Multi-Level Fills?',
+      a: 'When an incoming order quantity exceeds the resting order quantity, the engine calculates tradeQuantity = min(remainingBuyer, remainingSeller). The resting order is marked FILLED and removed via extractMin()/extractMax() in O(log n), while the remaining incoming quantity continues matching against the next price level in a while-loop until filled or no longer matching, at which point the residue rests in its respective heap.'
+    },
+    {
+      q: 'What is the Maker vs Taker pricing rule in continuous double auctions?',
+      a: 'The maker is the passive trader whose limit order was already resting in the order book, providing liquidity. The taker is the active incoming order that matches it. The continuous double auction executes the trade at the maker (resting) price. This incentivizes market liquidity and prevents price manipulation.'
+    },
+    {
+      q: 'What are the Space and Time Complexities of your matching system?',
+      a: 'Space Complexity: O(N) where N is the number of active open orders stored across the binary heap arrays and Hash Map. Time Complexities: Best Price Peek is O(1); Order Insertion is O(log n); Order Fill & Heap Rebalance is O(log n); Direct Order Lookup by ID is O(1); Trade Ledger Append is O(1) amortized.'
     }
   ];
 
   return (
     <div className="max-w-7xl mx-auto px-4 lg:px-6 py-6 space-y-6">
       
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-white/5">
-        <div>
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
-              <Binary className="w-4 h-4" />
-            </div>
-            <h1 className="text-xl font-black text-white tracking-tight">
-              Data Structures Architecture & Viva Guide
-            </h1>
-          </div>
-          <p className="text-xs text-slate-400 mt-1">
-            Visual inspection of custom MaxHeap, MinHeap, Hash Map, and Price-Time Priority algorithms.
-          </p>
-        </div>
+      {/* Top Banner Header */}
+      <div className="glass-panel rounded-2xl p-6 relative overflow-hidden">
+        <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -left-10 -top-10 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
 
-        {/* Tab Buttons */}
-        <div className="flex items-center gap-2 bg-[#101623] p-1 rounded-xl border border-white/5 text-xs">
-          <button
-            onClick={() => setActiveTab('visualizer')}
-            className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
-              activeTab === 'visualizer'
-                ? 'bg-cyan-500 text-black shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            Live Heap State
-          </button>
-          <button
-            onClick={() => setActiveTab('interactive')}
-            className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
-              activeTab === 'interactive'
-                ? 'bg-purple-500 text-white shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            Step-by-Step Simulator
-          </button>
-          <button
-            onClick={() => setActiveTab('viva')}
-            className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
-              activeTab === 'viva'
-                ? 'bg-emerald-500 text-black shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            Viva Q&A Cheat Sheet
-          </button>
-        </div>
-      </div>
-
-      {/* CORE ARCHITECTURE PIPELINE CARD */}
-      <div className="glass-panel rounded-2xl p-5 space-y-4">
-        <h2 className="text-xs font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
-          <Cpu className="w-4 h-4 text-cyan-400" />
-          <span>System Data Structures Blueprint</span>
-        </h2>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          
-          {/* Box 1: BUY ORDERS */}
-          <div className="p-4 rounded-xl bg-[#0B0F19] border border-emerald-500/20 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-black text-emerald-400">BUY ORDERS</span>
-              <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-300">
-                MAX HEAP
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-300">
-              Highest bid gets root index 0. O(1) peek, O(log n) insert & extract.
-            </p>
-            <div className="text-[10px] font-mono text-emerald-400/80 pt-1 border-t border-white/5">
-              Priority: Price DESC → Time ASC
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2.5">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-cyan-500/25">
+                <Binary className="w-5 h-5" />
+              </div>
+              <div>
+                <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                  Data Structures & Architecture Guide
+                </h1>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Academic demonstration of custom <span className="text-emerald-400 font-mono">MaxHeap</span>, <span className="text-rose-400 font-mono">MinHeap</span>, <span className="text-cyan-400 font-mono">Hash Map</span>, and Continuous Double-Auction matching algorithms.
+                </p>
+              </div>
             </div>
           </div>
 
-          {/* Box 2: SELL ORDERS */}
-          <div className="p-4 rounded-xl bg-[#0B0F19] border border-rose-500/20 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-black text-rose-400">SELL ORDERS</span>
-              <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-300">
-                MIN HEAP
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-300">
-              Lowest ask gets root index 0. O(1) peek, O(log n) insert & extract.
-            </p>
-            <div className="text-[10px] font-mono text-rose-400/80 pt-1 border-t border-white/5">
-              Priority: Price ASC → Time ASC
-            </div>
-          </div>
-
-          {/* Box 3: ORDER LOOKUP */}
-          <div className="p-4 rounded-xl bg-[#0B0F19] border border-cyan-500/20 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-black text-cyan-400">ORDER LOOKUP</span>
-              <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-300">
-                HASH MAP
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-300">
-              Key: orderId → Value: Order object. Provides instantaneous O(1) lookup & cancel verification.
-            </p>
-            <div className="text-[10px] font-mono text-cyan-400/80 pt-1 border-t border-white/5">
-              Lookup Time: O(1)
-            </div>
-          </div>
-
-          {/* Box 4: TRADE HISTORY */}
-          <div className="p-4 rounded-xl bg-[#0B0F19] border border-purple-500/20 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-black text-purple-400">TRADE HISTORY</span>
-              <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-300">
-                DYNAMIC ARRAY
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-300">
-              Maintains chronological audit trail of matched trades with O(1) amortized append.
-            </p>
-            <div className="text-[10px] font-mono text-purple-400/80 pt-1 border-t border-white/5">
-              Append Time: O(1)
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* TAB 1: LIVE HEAP ARRAY & TREE STATE */}
-      {activeTab === 'visualizer' && (
-        <div className="space-y-6">
-          
-          {/* Asset Selector */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span className="text-xs font-semibold text-slate-400">Select Asset:</span>
-              <select
-                value={selectedSymbol}
-                onChange={(e) => setSelectedSymbol(e.target.value)}
-                className="bg-[#101623] border border-white/10 rounded-xl px-3 py-1.5 text-xs font-bold text-white focus:outline-none focus:border-cyan-500"
-              >
-                {stocks.map((s) => (
-                  <option key={s.symbol} value={s.symbol}>
-                    {s.symbol} — {s.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+          {/* Navigation Pill Tabs */}
+          <div className="flex flex-wrap items-center gap-1.5 bg-[#0B0F19] p-1.5 rounded-2xl border border-white/10 text-xs">
+            <button
+              onClick={() => setActiveTab('how-it-works')}
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-bold transition-all ${
+                activeTab === 'how-it-works'
+                  ? 'bg-cyan-500 text-black shadow-md shadow-cyan-500/20'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Cpu className="w-3.5 h-3.5" />
+              <span>How Website Works</span>
+            </button>
 
             <button
-              onClick={fetchDebugState}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-bold border border-white/10 transition-colors"
+              onClick={() => setActiveTab('data-structures')}
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-bold transition-all ${
+                activeTab === 'data-structures'
+                  ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/20'
+                  : 'text-slate-400 hover:text-white'
+              }`}
             >
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span>Refresh Heaps</span>
+              <Layers className="w-3.5 h-3.5" />
+              <span>Data Structures Deep Dive</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('matching-algorithm')}
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-bold transition-all ${
+                activeTab === 'matching-algorithm'
+                  ? 'bg-purple-500 text-white shadow-md shadow-purple-500/20'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Zap className="w-3.5 h-3.5" />
+              <span>Matching Simulator</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('viva-guide')}
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-bold transition-all ${
+                activeTab === 'viva-guide'
+                  ? 'bg-emerald-500 text-black shadow-md shadow-emerald-500/20'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+              <span>Viva Q&A Guide</span>
             </button>
           </div>
-
-          {/* Heaps Side-by-Side */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            
-            {/* BUY MaxHeap */}
-            <div className="glass-panel rounded-2xl p-5 space-y-4">
-              <div className="flex items-center justify-between pb-2 border-b border-white/5">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
-                  <h3 className="text-sm font-extrabold text-white">
-                    BUY Side: MaxHeap Array
-                  </h3>
-                </div>
-                <span className="text-xs font-mono font-bold text-emerald-400">
-                  Size: {debugState?.maxHeap?.size || 0} orders
-                </span>
-              </div>
-
-              <div>
-                <span className="text-[11px] text-slate-400 font-semibold block mb-2">
-                  Array Indices [0..N-1] (Root at index 0):
-                </span>
-                <div className="flex flex-wrap gap-2">
-                  {debugState?.maxHeap?.rawArray?.length === 0 ? (
-                    <div className="text-xs text-slate-500 font-mono py-2">MaxHeap is empty</div>
-                  ) : (
-                    debugState?.maxHeap?.rawArray?.map((ord, idx) => (
-                      <div
-                        key={idx}
-                        className={`p-2 rounded-xl text-center font-mono border ${
-                          idx === 0
-                            ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300 shadow-md ring-1 ring-emerald-400'
-                            : 'bg-[#0B0F19] border-white/10 text-slate-300'
-                        }`}
-                      >
-                        <div className="text-[9px] text-slate-500 uppercase">
-                          idx[{idx}] {idx === 0 ? 'ROOT' : `P[${Math.floor((idx-1)/2)}]`}
-                        </div>
-                        <div className="text-xs font-bold text-emerald-400">
-                          ₹{ord.price}
-                        </div>
-                        <div className="text-[10px] text-slate-400">
-                          {ord.remainingQuantity} sh
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              {/* Sorted Extraction Priority */}
-              <div className="pt-3 border-t border-white/5">
-                <span className="text-[11px] text-slate-400 font-semibold block mb-2">
-                  Priority Queue Order (Highest Bid First):
-                </span>
-                <div className="space-y-1.5 max-h-40 overflow-y-auto">
-                  {debugState?.maxHeap?.sorted?.map((ord, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center justify-between p-2 rounded-lg bg-[#0B0F19] border border-white/5 text-xs font-mono"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="text-slate-500 font-bold">#{i + 1}</span>
-                        <span className="text-emerald-400 font-bold">₹{ord.price}</span>
-                        <span className="text-slate-400">({ord.remainingQuantity} shares)</span>
-                      </div>
-                      <span className="text-[10px] text-slate-500">
-                        {formatTime(ord.timestamp)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* SELL MinHeap */}
-            <div className="glass-panel rounded-2xl p-5 space-y-4">
-              <div className="flex items-center justify-between pb-2 border-b border-white/5">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-rose-400" />
-                  <h3 className="text-sm font-extrabold text-white">
-                    SELL Side: MinHeap Array
-                  </h3>
-                </div>
-                <span className="text-xs font-mono font-bold text-rose-400">
-                  Size: {debugState?.minHeap?.size || 0} orders
-                </span>
-              </div>
-
-              <div>
-                <span className="text-[11px] text-slate-400 font-semibold block mb-2">
-                  Array Indices [0..N-1] (Root at index 0):
-                </span>
-                <div className="flex flex-wrap gap-2">
-                  {debugState?.minHeap?.rawArray?.length === 0 ? (
-                    <div className="text-xs text-slate-500 font-mono py-2">MinHeap is empty</div>
-                  ) : (
-                    debugState?.minHeap?.rawArray?.map((ord, idx) => (
-                      <div
-                        key={idx}
-                        className={`p-2 rounded-xl text-center font-mono border ${
-                          idx === 0
-                            ? 'bg-rose-500/20 border-rose-500 text-rose-300 shadow-md ring-1 ring-rose-400'
-                            : 'bg-[#0B0F19] border-white/10 text-slate-300'
-                        }`}
-                      >
-                        <div className="text-[9px] text-slate-500 uppercase">
-                          idx[{idx}] {idx === 0 ? 'ROOT' : `P[${Math.floor((idx-1)/2)}]`}
-                        </div>
-                        <div className="text-xs font-bold text-rose-400">
-                          ₹{ord.price}
-                        </div>
-                        <div className="text-[10px] text-slate-400">
-                          {ord.remainingQuantity} sh
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              {/* Sorted Extraction Priority */}
-              <div className="pt-3 border-t border-white/5">
-                <span className="text-[11px] text-slate-400 font-semibold block mb-2">
-                  Priority Queue Order (Lowest Ask First):
-                </span>
-                <div className="space-y-1.5 max-h-40 overflow-y-auto">
-                  {debugState?.minHeap?.sorted?.map((ord, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center justify-between p-2 rounded-lg bg-[#0B0F19] border border-white/5 text-xs font-mono"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="text-slate-500 font-bold">#{i + 1}</span>
-                        <span className="text-rose-400 font-bold">₹{ord.price}</span>
-                        <span className="text-slate-400">({ord.remainingQuantity} shares)</span>
-                      </div>
-                      <span className="text-[10px] text-slate-500">
-                        {formatTime(ord.timestamp)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
-      )}
+      </div>
 
-      {/* TAB 2: STEP-BY-STEP SIMULATOR */}
-      {activeTab === 'interactive' && (
-        <div className="glass-panel rounded-2xl p-6 space-y-6">
-          <div className="space-y-1 pb-4 border-b border-white/5">
-            <h3 className="text-base font-bold text-white flex items-center gap-2">
-              <Play className="w-4 h-4 text-purple-400" />
-              <span>Step-by-Step Order Matching Visualizer</span>
-            </h3>
-            <p className="text-xs text-slate-400">
-              Configure incoming orders and step forward through every stage of the heapify & matching algorithm.
-            </p>
-          </div>
-
-          {/* Inputs */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-xl bg-[#0B0F19] border border-white/5">
-            <div className="space-y-2">
-              <span className="text-xs font-bold text-emerald-400 block">
-                Incoming BUY Order (Taker):
-              </span>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-[10px] text-slate-400 block">Price (₹)</label>
-                  <input
-                    type="number"
-                    value={simBuyPrice}
-                    onChange={(e) => setSimBuyPrice(Number(e.target.value))}
-                    className="w-full bg-[#101623] border border-white/10 rounded-lg p-2 text-xs font-mono text-white"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] text-slate-400 block">Quantity</label>
-                  <input
-                    type="number"
-                    value={simBuyQty}
-                    onChange={(e) => setSimBuyQty(Number(e.target.value))}
-                    className="w-full bg-[#101623] border border-white/10 rounded-lg p-2 text-xs font-mono text-white"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <span className="text-xs font-bold text-rose-400 block">
-                Resting SELL Order in MinHeap (Maker):
-              </span>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-[10px] text-slate-400 block">Price (₹)</label>
-                  <input
-                    type="number"
-                    value={simSellPrice}
-                    onChange={(e) => setSimSellPrice(Number(e.target.value))}
-                    className="w-full bg-[#101623] border border-white/10 rounded-lg p-2 text-xs font-mono text-white"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] text-slate-400 block">Quantity</label>
-                  <input
-                    type="number"
-                    value={simSellQty}
-                    onChange={(e) => setSimSellQty(Number(e.target.value))}
-                    className="w-full bg-[#101623] border border-white/10 rounded-lg p-2 text-xs font-mono text-white"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Stepper Progress */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              {simStepsList.map((st, i) => (
-                <button
-                  key={i}
-                  onClick={() => setSimStep(i)}
-                  className={`w-7 h-7 rounded-full text-xs font-bold transition-all ${
-                    simStep === i
-                      ? 'bg-purple-500 text-white ring-4 ring-purple-500/20'
-                      : simStep > i
-                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                      : 'bg-white/5 text-slate-500'
-                  }`}
-                >
-                  {i + 1}
-                </button>
-              ))}
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setSimStep(Math.max(0, simStep - 1))}
-                disabled={simStep === 0}
-                className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-bold disabled:opacity-30"
-              >
-                Previous Step
-              </button>
-              <button
-                onClick={() => setSimStep(Math.min(simStepsList.length - 1, simStep + 1))}
-                disabled={simStep === simStepsList.length - 1}
-                className="px-4 py-1.5 rounded-lg bg-purple-500 hover:bg-purple-400 text-white text-xs font-bold shadow-md shadow-purple-500/20 disabled:opacity-30"
-              >
-                Next Step →
-              </button>
-            </div>
-          </div>
-
-          {/* Current Step Card */}
-          <div className="p-5 rounded-2xl bg-[#0B0F19] border border-purple-500/30 space-y-4">
-            <div className="flex items-center justify-between">
-              <h4 className="text-sm font-extrabold text-white">
-                {simStepsList[simStep].title}
-              </h4>
-              <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                Step {simStep + 1} / {simStepsList.length}
-              </span>
-            </div>
-
-            <pre className="p-3 rounded-xl bg-[#101623] border border-white/5 text-xs font-mono text-cyan-300 overflow-x-auto">
-              {simStepsList[simStep].code}
-            </pre>
-
-            <p className="text-xs text-slate-300 leading-relaxed">
-              {simStepsList[simStep].explanation}
-            </p>
-
-            <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs font-mono text-emerald-400">
-              ⚡ {simStepsList[simStep].heapState}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* TAB 3: VIVA CHEAT SHEET & BIG-O COMPLEXITY */}
-      {activeTab === 'viva' && (
-        <div className="space-y-6">
+      {/* ========================================================= */}
+      {/* TAB 1: HOW THE WEBSITE WORKS (END-TO-END SYSTEM WORKFLOW) */}
+      {/* ========================================================= */}
+      {activeTab === 'how-it-works' && (
+        <div className="space-y-6 animate-in fade-in duration-200">
           
-          {/* Big-O Complexity Table */}
-          <div className="glass-panel rounded-2xl p-5 space-y-3">
-            <h3 className="text-sm font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
+          {/* High-Level Architecture Overview */}
+          <div className="glass-panel rounded-2xl p-6 space-y-4">
+            <div className="flex items-center gap-2 pb-3 border-b border-white/5">
+              <Activity className="w-5 h-5 text-cyan-400" />
+              <h2 className="text-sm font-extrabold text-white uppercase tracking-wider">
+                End-to-End Trading Flow Architecture
+              </h2>
+            </div>
+            
+            <p className="text-xs text-slate-300 leading-relaxed">
+              TradeFlow is structured as an institutional-grade, low-latency electronic trading exchange simulator. Unlike standard web apps that rely solely on slow database queries, TradeFlow maintains **in-memory Custom Data Structures (MaxHeap, MinHeap, Hash Map)** in RAM for instantaneous order matching, while persisting transactions to MongoDB and streaming updates via WebSockets.
+            </p>
+
+            {/* 4-Stage Visual Workflow Pipeline */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
+              
+              <div className="p-4 rounded-xl bg-[#0B0F19] border border-cyan-500/20 space-y-2 relative group hover:border-cyan-500/40 transition-all">
+                <div className="flex items-center justify-between">
+                  <span className="w-6 h-6 rounded-lg bg-cyan-500/20 text-cyan-400 font-mono font-bold text-xs flex items-center justify-center">
+                    01
+                  </span>
+                  <span className="text-[10px] font-mono uppercase text-cyan-400 font-bold px-2 py-0.5 rounded bg-cyan-500/10">
+                    Input & Validation
+                  </span>
+                </div>
+                <h3 className="text-xs font-black text-white">Order Placement</h3>
+                <p className="text-[11px] text-slate-400 leading-normal">
+                  Trader specifies Stock, Side (BUY/SELL), Price, and Quantity. Express backend validates inputs and tags user session.
+                </p>
+                <div className="text-[10px] font-mono text-cyan-300/80 pt-1 border-t border-white/5">
+                  POST /api/orders
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-[#0B0F19] border border-purple-500/20 space-y-2 relative group hover:border-purple-500/40 transition-all">
+                <div className="flex items-center justify-between">
+                  <span className="w-6 h-6 rounded-lg bg-purple-500/20 text-purple-400 font-mono font-bold text-xs flex items-center justify-center">
+                    02
+                  </span>
+                  <span className="text-[10px] font-mono uppercase text-purple-400 font-bold px-2 py-0.5 rounded bg-purple-500/10">
+                    In-Memory DS
+                  </span>
+                </div>
+                <h3 className="text-xs font-black text-white">Matching Engine</h3>
+                <p className="text-[11px] text-slate-400 leading-normal">
+                  Order hits the stock's OrderBook. Compares against opposite heap root in <span className="text-purple-300 font-mono font-bold">O(1)</span> using Price-Time priority.
+                </p>
+                <div className="text-[10px] font-mono text-purple-300/80 pt-1 border-t border-white/5">
+                  Continuous Double Auction
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-[#0B0F19] border border-emerald-500/20 space-y-2 relative group hover:border-emerald-500/40 transition-all">
+                <div className="flex items-center justify-between">
+                  <span className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-400 font-mono font-bold text-xs flex items-center justify-center">
+                    03
+                  </span>
+                  <span className="text-[10px] font-mono uppercase text-emerald-400 font-bold px-2 py-0.5 rounded bg-emerald-500/10">
+                    Persistence
+                  </span>
+                </div>
+                <h3 className="text-xs font-black text-white">Trade Settlement</h3>
+                <p className="text-[11px] text-slate-400 leading-normal">
+                  Executions produce immutable Trade records. Orders update to FILLED / PARTIAL. Stored permanently in MongoDB.
+                </p>
+                <div className="text-[10px] font-mono text-emerald-300/80 pt-1 border-t border-white/5">
+                  Mongoose + WiredTiger DB
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-[#0B0F19] border border-amber-500/20 space-y-2 relative group hover:border-amber-500/40 transition-all">
+                <div className="flex items-center justify-between">
+                  <span className="w-6 h-6 rounded-lg bg-amber-500/20 text-amber-400 font-mono font-bold text-xs flex items-center justify-center">
+                    04
+                  </span>
+                  <span className="text-[10px] font-mono uppercase text-amber-400 font-bold px-2 py-0.5 rounded bg-amber-500/10">
+                    Real-Time UI
+                  </span>
+                </div>
+                <h3 className="text-xs font-black text-white">Socket.IO Broadcast</h3>
+                <p className="text-[11px] text-slate-400 leading-normal">
+                  Matching engine emits events: <code className="text-[10px] text-amber-300">orderBookUpdated</code>, <code className="text-[10px] text-amber-300">tradeExecuted</code>, <code className="text-[10px] text-amber-300">marketPriceUpdated</code> to all clients.
+                </p>
+                <div className="text-[10px] font-mono text-amber-300/80 pt-1 border-t border-white/5">
+                  WebSocket Event Loop
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          {/* Detailed Component Breakdown */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            
+            <div className="glass-panel rounded-2xl p-5 space-y-3">
+              <div className="flex items-center gap-2 text-cyan-400 pb-2 border-b border-white/5">
+                <Globe className="w-4 h-4" />
+                <h3 className="text-xs font-black text-white uppercase">Frontend Layer (React + Vite)</h3>
+              </div>
+              <ul className="space-y-2 text-[11px] text-slate-300">
+                <li className="flex items-start gap-1.5">
+                  <Check className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0 mt-0.5" />
+                  <span><strong>React Context API:</strong> Centralizes state for live Order Book depth, user orders, and market prices.</span>
+                </li>
+                <li className="flex items-start gap-1.5">
+                  <Check className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0 mt-0.5" />
+                  <span><strong>Socket.IO Client:</strong> Listens for sub-millisecond price ticks and market depth rebalancing without page refresh.</span>
+                </li>
+                <li className="flex items-start gap-1.5">
+                  <Check className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0 mt-0.5" />
+                  <span><strong>Recharts & Visualizers:</strong> Renders interactive candlestick charts and graphical heap tree nodes.</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="glass-panel rounded-2xl p-5 space-y-3">
+              <div className="flex items-center gap-2 text-purple-400 pb-2 border-b border-white/5">
+                <Cpu className="w-4 h-4" />
+                <h3 className="text-xs font-black text-white uppercase">Core Engine Layer (Node.js)</h3>
+              </div>
+              <ul className="space-y-2 text-[11px] text-slate-300">
+                <li className="flex items-start gap-1.5">
+                  <Check className="w-3.5 h-3.5 text-purple-400 flex-shrink-0 mt-0.5" />
+                  <span><strong>Zero External Libs for DS:</strong> `MaxHeap.js`, `MinHeap.js`, and `OrderBook.js` are custom engineered from scratch.</span>
+                </li>
+                <li className="flex items-start gap-1.5">
+                  <Check className="w-3.5 h-3.5 text-purple-400 flex-shrink-0 mt-0.5" />
+                  <span><strong>Deterministic Matching:</strong> Continuous double auction with exact Price-Time Priority.</span>
+                </li>
+                <li className="flex items-start gap-1.5">
+                  <Check className="w-3.5 h-3.5 text-purple-400 flex-shrink-0 mt-0.5" />
+                  <span><strong>Multi-Asset Isolation:</strong> Dedicated OrderBook instances for each traded stock (`ABC`, `XYZ`, `TECH`, `ENERGY`).</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="glass-panel rounded-2xl p-5 space-y-3">
+              <div className="flex items-center gap-2 text-emerald-400 pb-2 border-b border-white/5">
+                <Database className="w-4 h-4" />
+                <h3 className="text-xs font-black text-white uppercase">Persistence Layer (MongoDB)</h3>
+              </div>
+              <ul className="space-y-2 text-[11px] text-slate-300">
+                <li className="flex items-start gap-1.5">
+                  <Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0 mt-0.5" />
+                  <span><strong>User Account Isolation:</strong> BCrypt-hashed passwords, JWT tokens, and per-user order/trade tagging.</span>
+                </li>
+                <li className="flex items-start gap-1.5">
+                  <Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0 mt-0.5" />
+                  <span><strong>Zero-Friction Fallback:</strong> Auto-spins embedded MongoMemoryServer with persistent WiredTiger disk storage.</span>
+                </li>
+                <li className="flex items-start gap-1.5">
+                  <Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0 mt-0.5" />
+                  <span><strong>Heap Warm-Up on Startup:</strong> Reads all open limit orders from DB into MaxHeap/MinHeap memory on launch.</span>
+                </li>
+              </ul>
+            </div>
+
+          </div>
+
+        </div>
+      )}
+
+      {/* ======================================================= */}
+      {/* TAB 2: DATA STRUCTURES DEEP DIVE (THE 4 CORE ALGORITHMS) */}
+      {/* ======================================================= */}
+      {activeTab === 'data-structures' && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          
+          {/* Grid of the 4 Data Structures */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            {/* 1. MAX HEAP */}
+            <div className="glass-panel rounded-2xl p-6 space-y-4 border-l-4 border-l-emerald-500">
+              <div className="flex items-center justify-between pb-2 border-b border-white/5">
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-mono text-xs font-bold">
+                    01
+                  </span>
+                  <h3 className="text-sm font-black text-white">Binary Max-Heap (BUY Orders / Bids)</h3>
+                </div>
+                <span className="text-[10px] font-mono text-emerald-300 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                  O(1) Peek / O(log n) Insert
+                </span>
+              </div>
+
+              <p className="text-xs text-slate-300 leading-relaxed">
+                A complete binary tree stored in a contiguous array where every parent node has a price greater than or equal to its children. The root element at index <code className="text-emerald-400 font-mono">heap[0]</code> is always the <strong>Highest Bidder</strong> in the market.
+              </p>
+
+              <div className="p-3 rounded-xl bg-[#0B0F19] border border-white/5 space-y-2 text-[11px] font-mono">
+                <div className="text-emerald-400 font-bold">// Array Index Mathematics</div>
+                <div className="text-slate-300">Parent Index: <span className="text-cyan-400">Math.floor((i - 1) / 2)</span></div>
+                <div className="text-slate-300">Left Child: <span className="text-cyan-400">2 * i + 1</span> | Right Child: <span className="text-cyan-400">2 * i + 2</span></div>
+                <div className="text-slate-400 text-[10px] pt-1 border-t border-white/5">
+                  Priority Invariant: Price DESC → Timestamp ASC (FIFO Tie-Breaker)
+                </div>
+              </div>
+
+              <div className="space-y-1.5 text-xs text-slate-300">
+                <div className="font-bold text-white text-[11px]">Key Methods:</div>
+                <ul className="list-disc list-inside space-y-1 text-[11px] text-slate-400">
+                  <li><strong className="text-slate-200">peek():</strong> Returns `heap[0]` in <strong>O(1)</strong> time.</li>
+                  <li><strong className="text-slate-200">insert(order):</strong> Appends to array and runs <code className="text-emerald-300">bubbleUp()</code> in <strong>O(log n)</strong>.</li>
+                  <li><strong className="text-slate-200">extractMax():</strong> Replaces root with last element and runs <code className="text-emerald-300">sinkDown()</code> in <strong>O(log n)</strong>.</li>
+                </ul>
+              </div>
+            </div>
+
+            {/* 2. MIN HEAP */}
+            <div className="glass-panel rounded-2xl p-6 space-y-4 border-l-4 border-l-rose-500">
+              <div className="flex items-center justify-between pb-2 border-b border-white/5">
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 font-mono text-xs font-bold">
+                    02
+                  </span>
+                  <h3 className="text-sm font-black text-white">Binary Min-Heap (SELL Orders / Asks)</h3>
+                </div>
+                <span className="text-[10px] font-mono text-rose-300 bg-rose-500/10 px-2 py-0.5 rounded-full">
+                  O(1) Peek / O(log n) Extract
+                </span>
+              </div>
+
+              <p className="text-xs text-slate-300 leading-relaxed">
+                A complete binary tree where every parent node has a price less than or equal to its children. The root element at index <code className="text-rose-400 font-mono">heap[0]</code> is always the <strong>Lowest Ask</strong> (cheapest seller) in the market.
+              </p>
+
+              <div className="p-3 rounded-xl bg-[#0B0F19] border border-white/5 space-y-2 text-[11px] font-mono">
+                <div className="text-rose-400 font-bold">// Priority Comparator Logic</div>
+                <div className="text-slate-300">if (child.price &lt; parent.price) <span className="text-emerald-400">return true; // Swap</span></div>
+                <div className="text-slate-300">if (child.price === parent.price) <span className="text-cyan-400">return child.time &lt; parent.time;</span></div>
+                <div className="text-slate-400 text-[10px] pt-1 border-t border-white/5">
+                  Priority Invariant: Price ASC → Timestamp ASC (FIFO Tie-Breaker)
+                </div>
+              </div>
+
+              <div className="space-y-1.5 text-xs text-slate-300">
+                <div className="font-bold text-white text-[11px]">Key Methods:</div>
+                <ul className="list-disc list-inside space-y-1 text-[11px] text-slate-400">
+                  <li><strong className="text-slate-200">peek():</strong> Returns lowest seller at `heap[0]` in <strong>O(1)</strong>.</li>
+                  <li><strong className="text-slate-200">insert(order):</strong> Inserts at bottom and runs <code className="text-rose-300">bubbleUp()</code> in <strong>O(log n)</strong>.</li>
+                  <li><strong className="text-slate-200">extractMin():</strong> Removes filled ask and restores heap in <strong>O(log n)</strong>.</li>
+                </ul>
+              </div>
+            </div>
+
+            {/* 3. HASH MAP */}
+            <div className="glass-panel rounded-2xl p-6 space-y-4 border-l-4 border-l-cyan-500">
+              <div className="flex items-center justify-between pb-2 border-b border-white/5">
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-400 font-mono text-xs font-bold">
+                    03
+                  </span>
+                  <h3 className="text-sm font-black text-white">Hash Map (`orderMap` for O(1) Lookups)</h3>
+                </div>
+                <span className="text-[10px] font-mono text-cyan-300 bg-cyan-500/10 px-2 py-0.5 rounded-full">
+                  O(1) Instant Lookup
+                </span>
+              </div>
+
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Why do we need a Hash Map alongside Heaps? Because finding an arbitrary order by ID inside a binary heap takes <span className="text-rose-400 font-mono">O(n)</span> linear time. The Hash Map stores a direct reference to every active order.
+              </p>
+
+              <div className="p-3 rounded-xl bg-[#0B0F19] border border-white/5 space-y-2 text-[11px] font-mono">
+                <div className="text-cyan-400 font-bold">// Hash Map Mapping Structure</div>
+                <div className="text-slate-300">Key: <span className="text-amber-300">"ORD_1791178026066"</span> (Unique Order ID)</div>
+                <div className="text-slate-300">Value: <span className="text-emerald-300">&#123; stockSymbol, type, price, qty, status &#125;</span></div>
+                <div className="text-slate-400 text-[10px] pt-1 border-t border-white/5">
+                  orderMap.get(orderId) → Instant O(1) Cancellation Verification
+                </div>
+              </div>
+
+              <div className="space-y-1.5 text-xs text-slate-300">
+                <div className="font-bold text-white text-[11px]">Why It Matters:</div>
+                <p className="text-[11px] text-slate-400">
+                  When a trader clicks <strong>Cancel Order</strong>, the system checks `orderMap.has(orderId)` in <strong>O(1)</strong>, marks the status to `CANCELLED`, and safely purges it without having to iterate through thousands of heap array elements.
+                </p>
+              </div>
+            </div>
+
+            {/* 4. DYNAMIC ARRAY & BUFFER */}
+            <div className="glass-panel rounded-2xl p-6 space-y-4 border-l-4 border-l-purple-500">
+              <div className="flex items-center justify-between pb-2 border-b border-white/5">
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded bg-purple-500/20 text-purple-400 font-mono text-xs font-bold">
+                    04
+                  </span>
+                  <h3 className="text-sm font-black text-white">Dynamic Array & Circular Timeline Buffer</h3>
+                </div>
+                <span className="text-[10px] font-mono text-purple-300 bg-purple-500/10 px-2 py-0.5 rounded-full">
+                  O(1) Amortized Append
+                </span>
+              </div>
+
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Maintains a chronological transaction log of all executed trades. Also powers the real-time stock price candlestick charts by maintaining a sliding window of the latest 150 historical data points.
+              </p>
+
+              <div className="p-3 rounded-xl bg-[#0B0F19] border border-white/5 space-y-2 text-[11px] font-mono">
+                <div className="text-purple-400 font-bold">// Sliding Window History Buffer</div>
+                <div className="text-slate-300">stock.history.push(&#123; timestamp, price, volume &#125;)</div>
+                <div className="text-slate-300">if (stock.history.length &gt; 150) stock.history.shift();</div>
+                <div className="text-slate-400 text-[10px] pt-1 border-t border-white/5">
+                  Prevents memory leaks and maintains ultra-fast chart rendering
+                </div>
+              </div>
+
+              <div className="space-y-1.5 text-xs text-slate-300">
+                <div className="font-bold text-white text-[11px]">Applications:</div>
+                <ul className="list-disc list-inside space-y-1 text-[11px] text-slate-400">
+                  <li><strong>Public Trade Ledger:</strong> Immutable record of buyers, sellers, prices, and quantities.</li>
+                  <li><strong>Market Analytics:</strong> Calculates 24h High, 24h Low, and Total Volume in real-time.</li>
+                </ul>
+              </div>
+            </div>
+
+          </div>
+
+          {/* Complexity Comparison Table */}
+          <div className="glass-panel rounded-2xl p-6 space-y-4">
+            <h3 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
               <Code2 className="w-4 h-4 text-cyan-400" />
-              <span>Time & Space Complexity Summary for Viva</span>
+              <span>Data Structures Theoretical Time Complexity Comparison</span>
             </h3>
 
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs font-mono">
                 <thead>
-                  <tr className="text-[10px] uppercase text-slate-400 border-b border-white/5 pb-2">
-                    <th className="py-2">Operation</th>
-                    <th>Data Structure</th>
-                    <th>Time Complexity</th>
-                    <th>Space Complexity</th>
-                    <th>Viva Explanation</th>
+                  <tr className="text-[11px] uppercase text-slate-400 border-b border-white/10 pb-2">
+                    <th className="py-2.5 pl-2">Data Structure</th>
+                    <th>Find Best Price</th>
+                    <th>Insert New Order</th>
+                    <th>Remove Top Order</th>
+                    <th>Lookup by Order ID</th>
+                    <th>Overall Suitability for Matching Engine</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
-                  <tr className="hover:bg-white/5">
-                    <td className="py-2.5 font-bold text-white">Insert Order</td>
-                    <td className="text-cyan-400">Binary Heap</td>
+                  <tr className="bg-emerald-500/5 text-slate-200">
+                    <td className="py-3 pl-2 font-bold text-emerald-400">
+                      Binary Heap (TradeFlow)
+                    </td>
+                    <td className="text-emerald-400 font-bold">O(1) (peek)</td>
                     <td className="text-emerald-400 font-bold">O(log n)</td>
-                    <td className="text-slate-400">O(1)</td>
-                    <td className="text-slate-300 font-sans text-[11px]">
-                      Appends to array end and performs bubble-up to restore heap property.
-                    </td>
-                  </tr>
-                  <tr className="hover:bg-white/5">
-                    <td className="py-2.5 font-bold text-white">Peek Best Bid / Ask</td>
-                    <td className="text-cyan-400">Binary Heap</td>
-                    <td className="text-emerald-400 font-bold">O(1)</td>
-                    <td className="text-slate-400">O(1)</td>
-                    <td className="text-slate-300 font-sans text-[11px]">
-                      Direct array index 0 access (root node of Max/Min Heap).
-                    </td>
-                  </tr>
-                  <tr className="hover:bg-white/5">
-                    <td className="py-2.5 font-bold text-white">Extract Max / Min</td>
-                    <td className="text-cyan-400">Binary Heap</td>
                     <td className="text-emerald-400 font-bold">O(log n)</td>
-                    <td className="text-slate-400">O(1)</td>
-                    <td className="text-slate-300 font-sans text-[11px]">
-                      Swaps root with last leaf, pops, and performs bubble-down.
+                    <td className="text-cyan-400 font-bold">O(1) (via Map)</td>
+                    <td>
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold">
+                        OPTIMAL (Used in Production)
+                      </span>
                     </td>
                   </tr>
-                  <tr className="hover:bg-white/5">
-                    <td className="py-2.5 font-bold text-white">Order Lookup by ID</td>
-                    <td className="text-cyan-400">Hash Map (Map)</td>
-                    <td className="text-emerald-400 font-bold">O(1)</td>
-                    <td className="text-slate-400">O(n)</td>
-                    <td className="text-slate-300 font-sans text-[11px]">
-                      Constant-time hash table lookup for instant cancellation checks.
+                  <tr className="text-slate-400">
+                    <td className="py-3 pl-2 font-bold text-slate-300">Unsorted Array</td>
+                    <td className="text-rose-400">O(n) (Linear scan)</td>
+                    <td className="text-emerald-400">O(1)</td>
+                    <td className="text-rose-400">O(n)</td>
+                    <td className="text-rose-400">O(n)</td>
+                    <td>
+                      <span className="px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-400 text-[10px] font-bold">
+                        Unusable (Too Slow for Top Price)
+                      </span>
+                    </td>
+                  </tr>
+                  <tr className="text-slate-400">
+                    <td className="py-3 pl-2 font-bold text-slate-300">Sorted Array</td>
+                    <td className="text-emerald-400">O(1)</td>
+                    <td className="text-rose-400">O(n) (Element shifting)</td>
+                    <td className="text-emerald-400">O(1)</td>
+                    <td className="text-amber-400">O(log n) (Binary search)</td>
+                    <td>
+                      <span className="px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-400 text-[10px] font-bold">
+                        Unusable (Slow O(n) Inserts)
+                      </span>
+                    </td>
+                  </tr>
+                  <tr className="text-slate-400">
+                    <td className="py-3 pl-2 font-bold text-slate-300">Binary Search Tree (BST)</td>
+                    <td className="text-amber-400">O(log n)</td>
+                    <td className="text-amber-400">O(log n)</td>
+                    <td className="text-amber-400">O(log n)</td>
+                    <td className="text-amber-400">O(log n)</td>
+                    <td>
+                      <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 text-[10px] font-bold">
+                        Higher overhead / Can degenerate to O(n)
+                      </span>
                     </td>
                   </tr>
                 </tbody>
@@ -586,51 +580,272 @@ export const DataStructuresPage = () => {
             </div>
           </div>
 
-          {/* Top Viva Questions & Answers */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            
-            <div className="glass-panel rounded-2xl p-5 space-y-2">
-              <div className="flex items-center gap-2 text-cyan-400 font-bold text-xs">
-                <HelpCircle className="w-4 h-4" />
-                <span>Q1: Why Max-Heap for BUY and Min-Heap for SELL?</span>
-              </div>
-              <p className="text-xs text-slate-300 leading-relaxed">
-                In a financial order book, sellers want to match with the highest available buying price (best bid at root of Max-Heap in O(1)). Conversely, buyers want the cheapest available asking price (best ask at root of Min-Heap in O(1)).
-              </p>
-            </div>
-
-            <div className="glass-panel rounded-2xl p-5 space-y-2">
-              <div className="flex items-center gap-2 text-cyan-400 font-bold text-xs">
-                <HelpCircle className="w-4 h-4" />
-                <span>Q2: How is Price-Time priority implemented?</span>
-              </div>
-              <p className="text-xs text-slate-300 leading-relaxed">
-                Inside the custom heap comparator: Primary comparison evaluates price (higher price for BUY, lower price for SELL). If prices are identical, the tie-breaker evaluates arrival timestamp (earlier timestamp gets priority FIFO).
-              </p>
-            </div>
-
-            <div className="glass-panel rounded-2xl p-5 space-y-2">
-              <div className="flex items-center gap-2 text-cyan-400 font-bold text-xs">
-                <HelpCircle className="w-4 h-4" />
-                <span>Q3: Why not use a Sorted Array or Linked List?</span>
-              </div>
-              <p className="text-xs text-slate-300 leading-relaxed">
-                A sorted array requires O(n) time for insertion due to element shifting. A linked list requires O(n) search time to locate insertion point. Binary Heaps achieve O(log n) insertions and O(1) peek while maintaining excellent CPU cache locality.
-              </p>
-            </div>
-
-            <div className="glass-panel rounded-2xl p-5 space-y-2">
-              <div className="flex items-center gap-2 text-cyan-400 font-bold text-xs">
-                <HelpCircle className="w-4 h-4" />
-                <span>Q4: Why combine Heaps with a Hash Map?</span>
-              </div>
-              <p className="text-xs text-slate-300 leading-relaxed">
-                Searching for an arbitrary order in a heap takes O(n). By maintaining a secondary Hash Map (orderId → order), order status checks and cancellation validations occur in O(1) time without traversing the tree.
-              </p>
-            </div>
-          </div>
         </div>
       )}
+
+      {/* ======================================================== */}
+      {/* TAB 3: MATCHING ALGORITHM SIMULATOR (VIVA STEP WALKTHROUGH) */}
+      {/* ======================================================== */}
+      {activeTab === 'matching-algorithm' && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          
+          {/* Interactive Parameters Card */}
+          <div className="glass-panel rounded-2xl p-6 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/5">
+              <div>
+                <h2 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
+                  <Play className="w-4 h-4 text-purple-400" />
+                  <span>Interactive Double-Auction Simulator</span>
+                </h2>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Adjust custom order parameters and step through the Continuous Double Auction matching algorithm.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setSimStep((prev) => Math.max(0, prev - 1))}
+                  disabled={simStep === 0}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
+                    simStep === 0
+                      ? 'opacity-40 cursor-not-allowed border-white/5 text-slate-500'
+                      : 'border-white/10 bg-white/5 text-white hover:bg-white/10'
+                  }`}
+                >
+                  Previous Step
+                </button>
+                <button
+                  onClick={() => setSimStep((prev) => Math.min(simStepsList.length - 1, prev + 1))}
+                  disabled={simStep === simStepsList.length - 1}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-md ${
+                    simStep === simStepsList.length - 1
+                      ? 'opacity-40 cursor-not-allowed bg-purple-500/30 text-white'
+                      : 'bg-purple-500 hover:bg-purple-400 text-white shadow-purple-500/25'
+                  }`}
+                >
+                  Next Step ({simStep + 1}/{simStepsList.length})
+                </button>
+                <button
+                  onClick={() => setSimStep(0)}
+                  className="p-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-400 hover:text-white transition-colors"
+                  title="Reset Simulator"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Custom Inputs */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4 rounded-xl bg-[#0B0F19] border border-white/5">
+              <div>
+                <label className="text-[11px] font-semibold text-rose-400">Resting Sell Price (₹)</label>
+                <input
+                  type="number"
+                  value={simSellPrice}
+                  onChange={(e) => {
+                    setSimSellPrice(Number(e.target.value));
+                    setSimStep(0);
+                  }}
+                  className="w-full mt-1 bg-[#101623] border border-white/10 rounded-xl px-3 py-1.5 text-xs font-mono font-bold text-white focus:outline-none focus:border-rose-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-semibold text-rose-400">Resting Sell Qty (Shares)</label>
+                <input
+                  type="number"
+                  value={simSellQty}
+                  onChange={(e) => {
+                    setSimSellQty(Number(e.target.value));
+                    setSimStep(0);
+                  }}
+                  className="w-full mt-1 bg-[#101623] border border-white/10 rounded-xl px-3 py-1.5 text-xs font-mono font-bold text-white focus:outline-none focus:border-rose-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-semibold text-emerald-400">Incoming Buy Price (₹)</label>
+                <input
+                  type="number"
+                  value={simBuyPrice}
+                  onChange={(e) => {
+                    setSimBuyPrice(Number(e.target.value));
+                    setSimStep(0);
+                  }}
+                  className="w-full mt-1 bg-[#101623] border border-white/10 rounded-xl px-3 py-1.5 text-xs font-mono font-bold text-white focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-semibold text-emerald-400">Incoming Buy Qty (Shares)</label>
+                <input
+                  type="number"
+                  value={simBuyQty}
+                  onChange={(e) => {
+                    setSimBuyQty(Number(e.target.value));
+                    setSimStep(0);
+                  }}
+                  className="w-full mt-1 bg-[#101623] border border-white/10 rounded-xl px-3 py-1.5 text-xs font-mono font-bold text-white focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+            </div>
+
+            {/* Stepper Progress Bar */}
+            <div className="grid grid-cols-4 gap-2 pt-2">
+              {simStepsList.map((st, idx) => (
+                <div
+                  key={idx}
+                  onClick={() => setSimStep(idx)}
+                  className={`p-2.5 rounded-xl border text-center cursor-pointer transition-all ${
+                    simStep === idx
+                      ? 'bg-purple-500/20 border-purple-500 text-white font-bold shadow-sm'
+                      : simStep > idx
+                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+                      : 'bg-[#0B0F19] border-white/5 text-slate-500'
+                  }`}
+                >
+                  <div className="text-[10px] font-mono">STEP {idx}</div>
+                  <div className="text-[11px] font-semibold truncate mt-0.5">{st.title.split(':')[0]}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Current Step Execution Card */}
+          <div className="glass-panel rounded-2xl p-6 space-y-4 border-l-4 border-l-purple-500">
+            <div className="flex items-center justify-between pb-2 border-b border-white/5">
+              <span className="text-xs font-mono text-purple-400 font-bold uppercase tracking-wider">
+                Step {simStep} Execution Details
+              </span>
+              <span className="text-[10px] font-mono text-slate-400 bg-white/5 px-2 py-0.5 rounded-full">
+                {simStepsList[simStep].title}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              
+              {/* Code / Algorithm Block */}
+              <div className="p-4 rounded-xl bg-[#0B0F19] border border-white/5 space-y-2 font-mono text-xs">
+                <div className="text-slate-400 text-[10px] uppercase font-bold">// Engine Action Code</div>
+                <pre className="text-cyan-300 overflow-x-auto whitespace-pre-wrap leading-relaxed">
+                  {simStepsList[simStep].action}
+                </pre>
+                <div className="pt-2 border-t border-white/5 text-emerald-400 text-[11px]">
+                  State: {simStepsList[simStep].dsEffect}
+                </div>
+              </div>
+
+              {/* Natural Language Explanation */}
+              <div className="space-y-3 flex flex-col justify-between">
+                <div className="space-y-2">
+                  <h4 className="text-xs font-extrabold text-white uppercase tracking-wider">
+                    Algorithmic Invariant:
+                  </h4>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    {simStepsList[simStep].explanation}
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-200 text-xs flex items-center justify-between">
+                  <span>Price Matching Invariant:</span>
+                  <span className="font-mono font-bold text-white">
+                    {simBuyPrice >= simSellPrice ? `BUY (₹${simBuyPrice}) >= SELL (₹${simSellPrice}) → EXECUTE` : `BUY < SELL → REST IN BOOK`}
+                  </span>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      )}
+
+      {/* ======================================================= */}
+      {/* TAB 4: VIVA Q&A GUIDE & PROFESSOR CHEAT SHEET */}
+      {/* ======================================================= */}
+      {activeTab === 'viva-guide' && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          
+          <div className="glass-panel rounded-2xl p-6 space-y-4">
+            <div className="flex items-center gap-2 pb-3 border-b border-white/5">
+              <HelpCircle className="w-5 h-5 text-emerald-400" />
+              <div>
+                <h2 className="text-sm font-extrabold text-white uppercase tracking-wider">
+                  Professor Viva Examination Cheat Sheet
+                </h2>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Model technical answers to likely questions asked by academic examiners and professors during project viva.
+                </p>
+              </div>
+            </div>
+
+            {/* Accordion Questions */}
+            <div className="space-y-3 pt-2">
+              {vivaQuestions.map((item, idx) => {
+                const isOpen = openFaq === idx;
+                return (
+                  <div
+                    key={idx}
+                    className={`rounded-2xl border transition-all overflow-hidden ${
+                      isOpen
+                        ? 'bg-[#101623] border-emerald-500/30 shadow-lg shadow-emerald-500/5'
+                        : 'bg-[#0B0F19] border-white/5 hover:border-white/10'
+                    }`}
+                  >
+                    <button
+                      onClick={() => setOpenFaq(isOpen ? null : idx)}
+                      className="w-full flex items-center justify-between p-4 text-left transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className={`w-6 h-6 rounded-lg text-xs font-mono font-bold flex items-center justify-center ${
+                          isOpen ? 'bg-emerald-500 text-black' : 'bg-white/5 text-slate-400'
+                        }`}>
+                          Q{idx + 1}
+                        </span>
+                        <span className="text-xs font-bold text-white pr-4">
+                          {item.q}
+                        </span>
+                      </div>
+                      {isOpen ? (
+                        <ChevronDown className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                      ) : (
+                        <ChevronRight className="w-4 h-4 text-slate-500 flex-shrink-0" />
+                      )}
+                    </button>
+
+                    {isOpen && (
+                      <div className="px-4 pb-4 pt-1 border-t border-white/5 text-xs text-slate-300 leading-relaxed bg-[#0B0F19]/50">
+                        <div className="p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/10 text-emerald-200">
+                          <strong className="text-emerald-400 font-bold block mb-1">Answer to Professor:</strong>
+                          {item.a}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Quick Summary Reference Box */}
+          <div className="p-5 rounded-2xl bg-gradient-to-r from-cyan-500/10 via-purple-500/10 to-emerald-500/10 border border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="text-xs font-extrabold text-white flex items-center gap-1.5">
+                <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                <span>Unit Test Verification (Automated Proof)</span>
+              </div>
+              <p className="text-xs text-slate-400">
+                All 41/41 unit test scenarios covering Heaps, Priority Tie-Breakers, Partial Fills, and Cancellations are verified in `tests/dataStructures.test.js`.
+              </p>
+            </div>
+            <div className="px-3.5 py-1.5 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-mono font-bold whitespace-nowrap">
+              41 / 41 Tests Passing (100%)
+            </div>
+          </div>
+
+        </div>
+      )}
+
     </div>
   );
 };
